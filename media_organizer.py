@@ -1,5 +1,6 @@
 import os
 import shutil
+import hashlib
 from helpers import get_input
 
 print("\n=== Media Organizer v3 ===\n")
@@ -14,10 +15,14 @@ media_root = get_input(
 inbox_folder = os.path.join(media_root, "00_Inbox")
 review_folder = os.path.join(media_root, "99_Review")
 
-dry_run = get_input(
-    "Dry run mode? Preview only, no files moved. (y/n)",
-    "y"
-).lower() == "y"
+dry_run_answer = input(
+    "Dry run mode? Preview only, no files moved. (y/n) [y]: "
+).strip().lower()
+
+if not dry_run_answer:
+    dry_run_answer = "y"
+
+dry_run = dry_run_answer == "y"
 
 # ===== FILE CATEGORIES =====
 
@@ -141,6 +146,36 @@ def build_clean_name(category, filename, planned_numbers):
    
 
 
+def get_file_hash(file_path):
+    hasher = hashlib.md5()
+
+    with open(file_path, "rb") as file:
+        while chunk := file.read(8192):
+            hasher.update(chunk)
+
+    return hasher.hexdigest()
+
+
+def is_duplicate(file_path, destination_folder):
+    if not os.path.exists(destination_folder):
+        return False
+
+    incoming_hash = get_file_hash(file_path)
+
+    for existing_file in os.listdir(destination_folder):
+        existing_path = os.path.join(destination_folder, existing_file)
+
+        if not os.path.isfile(existing_path):
+            continue
+
+        existing_hash = get_file_hash(existing_path)
+
+        if incoming_hash == existing_hash:
+            return True
+
+    return False
+
+
 def move_file(file_path, planned_numbers):
     filename = os.path.basename(file_path)
     category = get_category(filename)
@@ -148,6 +183,20 @@ def move_file(file_path, planned_numbers):
     destination_folder = os.path.join(media_root, category)
     clean_name = build_clean_name(category, filename, planned_numbers)
     destination_path = os.path.join(destination_folder, clean_name)
+
+    duplicate_folder = os.path.join(review_folder, "Duplicates")
+
+    if is_duplicate(file_path, destination_folder):
+        duplicate_path = os.path.join(duplicate_folder, filename)
+
+        if dry_run:
+            print(f"[DUPLICATE] {filename} already exists in {category}")
+        else:
+            os.makedirs(duplicate_folder, exist_ok=True)
+            shutil.move(file_path, duplicate_path)
+            print(f"[DUPLICATE MOVE] {filename} -> 99_Review/Duplicates")
+
+        return "Duplicates"
 
     if dry_run:
         print(f"[DRY RUN] {filename} -> {category}/{clean_name}")
@@ -157,7 +206,6 @@ def move_file(file_path, planned_numbers):
         print(f"[MOVE] {filename} -> {category}/{clean_name}")
 
     return category
-
 
 # ===== RUN =====
 
