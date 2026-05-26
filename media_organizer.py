@@ -108,13 +108,37 @@ def build_starting_numbers():
 
 
 def build_clean_name(category, filename, planned_numbers):
-    ext = os.path.splitext(filename)[1].lower()
+    base, ext = os.path.splitext(filename)
+
     prefix = prefixes.get(category, "FILE_")
 
     number = planned_numbers[category]
     planned_numbers[category] += 1
 
-    return f"{prefix}{str(number).zfill(4)}{ext}"
+    # ===== CLEAN ORIGINAL NAME =====
+
+    clean_base = base.lower()
+
+    clean_base = clean_base.replace("_", " ")
+    clean_base = clean_base.replace("-", " ")
+
+    clean_base = "".join(
+        char for char in clean_base
+        if char.isalnum() or char == " "
+    )
+
+    clean_base = " ".join(clean_base.split())
+
+    clean_base = clean_base.replace(" ", "_")
+
+    # Prevent absurdly long filenames
+    clean_base = clean_base[:40]
+
+    if not clean_base:
+        clean_base = "untitled"
+
+    return f"{prefix}{str(number).zfill(4)}_{clean_base}{ext.lower()}"
+   
 
 
 def move_file(file_path, planned_numbers):
