@@ -1,9 +1,11 @@
 import os
 import shutil
 import hashlib
+import json
+import time
 from helpers import get_input
 
-print("\n=== Media Organizer v3 ===\n")
+print("\n=== Media Organizer v6 ===\n")
 
 # ===== INPUT =====
 
@@ -24,7 +26,15 @@ if not dry_run_answer:
 
 dry_run = dry_run_answer == "y"
 
+watch_mode_answer = input(
+    "Watch mode? Keep running and monitor 00_Inbox. (y/n) [n]: "
+).strip().lower()
+
+watch_mode = watch_mode_answer == "y"
+
 # ===== FILE CATEGORIES =====
+
+hash_cache_file = os.path.join(media_root, "hash_cache.json")
 
 folders = {
     "Videos": [".mp4", ".mkv", ".mov", ".avi", ".webm", ".wmv"],
@@ -67,6 +77,21 @@ def make_folder(folder):
         print(f"[DRY RUN] Create folder if needed: {folder}")
     else:
         os.makedirs(folder, exist_ok=True)
+
+def load_hash_cache():
+    if not os.path.exists(hash_cache_file):
+        return {}
+
+    try:
+        with open(hash_cache_file, "r") as file:
+            return json.load(file)
+    except:
+        return {}
+
+
+def save_hash_cache(cache):
+    with open(hash_cache_file, "w") as file:
+        json.dump(cache, file, indent=4)
 
 
 def get_category(filename):
@@ -146,21 +171,29 @@ def build_clean_name(category, filename, planned_numbers):
    
 
 
-def get_file_hash(file_path):
+def get_file_hash(file_path, cache):
+    absolute_path = os.path.abspath(file_path)
+
+    if absolute_path in cache:
+        return cache[absolute_path]
+
     hasher = hashlib.md5()
 
     with open(file_path, "rb") as file:
         while chunk := file.read(8192):
             hasher.update(chunk)
 
-    return hasher.hexdigest()
+    file_hash = hasher.hexdigest()
+    cache[absolute_path] = file_hash
+
+    return file_hash
 
 
-def is_duplicate(file_path, destination_folder):
+def is_duplicate(file_path, destination_folder, cache):
     if not os.path.exists(destination_folder):
         return False
 
-    incoming_hash = get_file_hash(file_path)
+    incoming_hash = get_file_hash(file_path, cache)
 
     for existing_file in os.listdir(destination_folder):
         existing_path = os.path.join(destination_folder, existing_file)
@@ -168,7 +201,7 @@ def is_duplicate(file_path, destination_folder):
         if not os.path.isfile(existing_path):
             continue
 
-        existing_hash = get_file_hash(existing_path)
+        existing_hash = get_file_hash(existing_path, cache)
 
         if incoming_hash == existing_hash:
             return True
@@ -186,7 +219,7 @@ def move_file(file_path, planned_numbers):
 
     duplicate_folder = os.path.join(review_folder, "Duplicates")
 
-    if is_duplicate(file_path, destination_folder):
+    if is_duplicate(file_path, destination_folder, hash_cache):
         duplicate_path = os.path.join(duplicate_folder, filename)
 
         if dry_run:
@@ -221,6 +254,7 @@ for folder_name in folders:
 
 items = sorted(os.listdir(inbox_folder))
 planned_numbers = build_starting_numbers()
+hash_cache = load_hash_cache()
 
 if not items:
     print("[DONE] 00_Inbox is empty. Nothing to organize.")
@@ -252,4 +286,40 @@ if category_counts:
     for category, count in sorted(category_counts.items()):
         print(f"- {category}: {count}")
 
+if not dry_run:
+    save_hash_cache(hash_cache)
+
 print("\n[DONE] Media organization complete.\n")
+
+# ===== WATCH MODE =====
+
+if watch_mode:
+    print("[WATCH MODE] Monitoring 00_Inbox...")
+    print("[WATCH MODE] Press CTRL + C to stop.\n")
+
+    known_files = set(os.listdir(inbox_folder))
+
+    while True:
+        time.sleep(3)
+
+        current_files = set(os.listdir(inbox_folder))
+        new_files = current_files - known_files
+
+        if new_files:
+            print(f"\n[WATCH MODE] New files detected: {len(new_files)}")
+
+            planned_numbers = build_starting_numbers()
+
+            for item in sorted(new_files):
+                item_path = os.path.join(inbox_folder, item)
+
+                if os.path.isfile(item_path):
+                    category = move_file(item_path, planned_numbers)
+                    category_counts[category] = (
+                        category_counts.get(category, 0) + 1
+                    )
+
+            if not dry_run:
+                save_hash_cache(hash_cache)
+
+        known_files = current_files
