@@ -10,25 +10,24 @@ print("\n=== Media Organizer v6 ===\n")
 # ===== INPUT =====
 
 media_root = get_input(
-    "Enter your main media library folder",
-    r"C:\Users\K\Desktop\Media"
+    "Enter your main media library folder", r"C:\Users\K\Desktop\Media"
 )
 
 inbox_folder = os.path.join(media_root, "00_Inbox")
 review_folder = os.path.join(media_root, "99_Review")
 
-dry_run_answer = input(
-    "Dry run mode? Preview only, no files moved. (y/n) [y]: "
-).strip().lower()
+dry_run_answer = (
+    input("Dry run mode? Preview only, no files moved. (y/n) [y]: ").strip().lower()
+)
 
 if not dry_run_answer:
     dry_run_answer = "y"
 
 dry_run = dry_run_answer == "y"
 
-watch_mode_answer = input(
-    "Watch mode? Keep running and monitor 00_Inbox. (y/n) [n]: "
-).strip().lower()
+watch_mode_answer = (
+    input("Watch mode? Keep running and monitor 00_Inbox. (y/n) [n]: ").strip().lower()
+)
 
 watch_mode = watch_mode_answer == "y"
 
@@ -52,7 +51,7 @@ prefixes = {
     "Documents": "DOC_",
     "Archives": "ARC_",
     "Subtitles": "SUB_",
-    "99_Review": "REV_"
+    "99_Review": "REV_",
 }
 
 # ===== VALIDATION =====
@@ -72,11 +71,13 @@ if not os.path.exists(inbox_folder):
 
 # ===== HELPERS =====
 
+
 def make_folder(folder):
     if dry_run:
         print(f"[DRY RUN] Create folder if needed: {folder}")
     else:
         os.makedirs(folder, exist_ok=True)
+
 
 def load_hash_cache():
     if not os.path.exists(hash_cache_file):
@@ -152,10 +153,7 @@ def build_clean_name(category, filename, planned_numbers):
     clean_base = clean_base.replace("_", " ")
     clean_base = clean_base.replace("-", " ")
 
-    clean_base = "".join(
-        char for char in clean_base
-        if char.isalnum() or char == " "
-    )
+    clean_base = "".join(char for char in clean_base if char.isalnum() or char == " ")
 
     clean_base = " ".join(clean_base.split())
 
@@ -168,7 +166,6 @@ def build_clean_name(category, filename, planned_numbers):
         clean_base = "untitled"
 
     return f"{prefix}{str(number).zfill(4)}_{clean_base}{ext.lower()}"
-   
 
 
 def get_file_hash(file_path, cache):
@@ -240,12 +237,19 @@ def move_file(file_path, planned_numbers):
 
     return category
 
+
 # ===== RUN =====
 
 if dry_run:
     print("\n[MODE] Dry run enabled. No files will be moved.\n")
 else:
     print("\n[MODE] Live run enabled. Files may be moved.\n")
+
+    confirm = get_input("Type ORGANIZE to confirm live organization", "")
+
+    if confirm != "ORGANIZE":
+        print("[CANCELLED] Live organization was not confirmed.")
+        exit()
 
 make_folder(review_folder)
 
@@ -315,9 +319,7 @@ if watch_mode:
 
                 if os.path.isfile(item_path):
                     category = move_file(item_path, planned_numbers)
-                    category_counts[category] = (
-                        category_counts.get(category, 0) + 1
-                    )
+                    category_counts[category] = category_counts.get(category, 0) + 1
 
             if not dry_run:
                 save_hash_cache(hash_cache)
