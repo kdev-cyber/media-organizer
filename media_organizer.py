@@ -283,7 +283,12 @@ for item in items:
         processed_count += 1
 
 print("\n=== Summary ===")
-print(f"Files processed: {processed_count}")
+
+if dry_run:
+    print(f"Files previewed: {processed_count}")
+else:
+    print(f"Files moved: {processed_count}")
+
 print(f"Folders skipped: {skipped_folders}")
 
 if category_counts:
