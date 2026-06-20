@@ -117,7 +117,8 @@ def get_highest_number(folder, prefix):
         if not name.startswith(prefix):
             continue
 
-        number_text = name.replace(prefix, "", 1)
+        remaining_name = name.replace(prefix, "", 1)
+        number_text = remaining_name.split("_", 1)[0]
 
         if not number_text.isdigit():
             continue
