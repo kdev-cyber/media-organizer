@@ -299,19 +299,6 @@ def build_plan_item(file_path, planned_numbers, reserved_paths=None):
         "display_path": f"{category}/{os.path.basename(destination_path)}",
     }
 
-    clean_name = build_clean_name(category, filename, planned_numbers)
-    destination_path = os.path.join(destination_folder, clean_name)
-
-    return {
-        "action": "move",
-        "filename": filename,
-        "category": category,
-        "source_path": file_path,
-        "destination_folder": destination_folder,
-        "destination_path": destination_path,
-        "display_path": f"{category}/{clean_name}",
-    }
-
 
 # ===== RUN =====
 
