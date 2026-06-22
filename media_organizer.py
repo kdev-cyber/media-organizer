@@ -239,6 +239,39 @@ def move_file(file_path, planned_numbers):
     return category
 
 
+def build_plan_item(file_path, planned_numbers):
+    filename = os.path.basename(file_path)
+    category = get_category(filename)
+
+    destination_folder = os.path.join(media_root, category)
+    duplicate_folder = os.path.join(review_folder, "Duplicates")
+    duplicate_path = os.path.join(duplicate_folder, filename)
+
+    if is_duplicate(file_path, destination_folder, hash_cache):
+        return {
+            "action": "duplicate",
+            "filename": filename,
+            "category": "Duplicates",
+            "source_path": file_path,
+            "destination_folder": duplicate_folder,
+            "destination_path": duplicate_path,
+            "display_path": "99_Review/Duplicates",
+        }
+
+    clean_name = build_clean_name(category, filename, planned_numbers)
+    destination_path = os.path.join(destination_folder, clean_name)
+
+    return {
+        "action": "move",
+        "filename": filename,
+        "category": category,
+        "source_path": file_path,
+        "destination_folder": destination_folder,
+        "destination_path": destination_path,
+        "display_path": f"{category}/{clean_name}",
+    }
+
+
 # ===== RUN =====
 
 if dry_run:
