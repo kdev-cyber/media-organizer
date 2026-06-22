@@ -277,18 +277,7 @@ def build_plan_item(file_path, planned_numbers):
 if dry_run:
     print("\n[MODE] Dry run enabled. No files will be moved.\n")
 else:
-    print("\n[MODE] Live run enabled. Files may be moved.\n")
-
-    confirm = get_input("Type ORGANIZE to confirm live organization", "")
-
-    if confirm != "ORGANIZE":
-        print("[CANCELLED] Live organization was not confirmed.")
-        exit()
-
-make_folder(review_folder)
-
-for folder_name in folders:
-    make_folder(os.path.join(media_root, folder_name))
+    print("\n[MODE] Live run enabled. A plan will be shown before files are moved.\n")
 
 items = sorted(os.listdir(inbox_folder))
 planned_numbers = build_starting_numbers()
@@ -298,9 +287,16 @@ if not items:
     print("[DONE] 00_Inbox is empty. Nothing to organize.")
     exit()
 
-processed_count = 0
+plan = []
 skipped_folders = 0
-category_counts = {}
+
+if dry_run:
+    make_folder(review_folder)
+
+    for folder_name in folders:
+        make_folder(os.path.join(media_root, folder_name))
+else:
+    print("[PLAN] Needed folders will be created during live organization.")
 
 for item in items:
     item_path = os.path.join(inbox_folder, item)
@@ -311,9 +307,66 @@ for item in items:
         continue
 
     if os.path.isfile(item_path):
-        category = move_file(item_path, planned_numbers)
-        category_counts[category] = category_counts.get(category, 0) + 1
-        processed_count += 1
+        plan_item = build_plan_item(item_path, planned_numbers)
+        plan.append(plan_item)
+
+if not plan:
+    print("[DONE] No files found to organize.")
+
+    print("\n=== Summary ===")
+
+    if dry_run:
+        print("Files previewed: 0")
+    else:
+        print("Files moved: 0")
+
+    print(f"Folders skipped: {skipped_folders}")
+    exit()
+
+print("\n=== Organization Plan ===")
+
+for plan_item in plan:
+    filename = plan_item["filename"]
+
+    if plan_item["action"] == "duplicate":
+        print(f"[DUPLICATE] {filename} -> {plan_item['display_path']}")
+    else:
+        if dry_run:
+            print(f"[DRY RUN] {filename} -> {plan_item['display_path']}")
+        else:
+            print(f"[PLAN] {filename} -> {plan_item['display_path']}")
+
+if not dry_run:
+    print("\n[CONFIRMATION REQUIRED]")
+    confirm = get_input("Type ORGANIZE to move files using this plan", "")
+
+    if confirm != "ORGANIZE":
+        print("[CANCELLED] Live organization was not confirmed.")
+        exit()
+
+processed_count = 0
+category_counts = {}
+
+if not dry_run:
+    print("\n=== Applying Plan ===")
+
+for plan_item in plan:
+    category = plan_item["category"]
+    filename = plan_item["filename"]
+
+    category_counts[category] = category_counts.get(category, 0) + 1
+    processed_count += 1
+
+    if dry_run:
+        continue
+
+    os.makedirs(plan_item["destination_folder"], exist_ok=True)
+    shutil.move(plan_item["source_path"], plan_item["destination_path"])
+
+    if plan_item["action"] == "duplicate":
+        print(f"[DUPLICATE MOVE] {filename} -> {plan_item['display_path']}")
+    else:
+        print(f"[MOVE] {filename} -> {plan_item['display_path']}")
 
 print("\n=== Summary ===")
 
@@ -333,6 +386,7 @@ if not dry_run:
     save_hash_cache(hash_cache)
 
 print("\n[DONE] Media organization complete.\n")
+
 
 # ===== WATCH MODE =====
 
