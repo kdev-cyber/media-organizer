@@ -207,6 +207,29 @@ def is_duplicate(file_path, destination_folder, cache):
     return False
 
 
+def get_available_path(path, reserved_paths=None):
+    if reserved_paths is None:
+        reserved_paths = set()
+
+    folder = os.path.dirname(path)
+    base, ext = os.path.splitext(os.path.basename(path))
+
+    candidate_path = path
+    counter = 1
+
+    while (
+        os.path.exists(candidate_path)
+        or os.path.abspath(candidate_path).lower() in reserved_paths
+    ):
+        candidate_name = f"{base}_copy_{counter}{ext}"
+        candidate_path = os.path.join(folder, candidate_name)
+        counter += 1
+
+    reserved_paths.add(os.path.abspath(candidate_path).lower())
+
+    return candidate_path
+
+
 def move_file(file_path, planned_numbers):
     filename = os.path.basename(file_path)
     category = get_category(filename)
@@ -239,15 +262,18 @@ def move_file(file_path, planned_numbers):
     return category
 
 
-def build_plan_item(file_path, planned_numbers):
+def build_plan_item(file_path, planned_numbers, reserved_paths=None):
     filename = os.path.basename(file_path)
     category = get_category(filename)
 
     destination_folder = os.path.join(media_root, category)
     duplicate_folder = os.path.join(review_folder, "Duplicates")
-    duplicate_path = os.path.join(duplicate_folder, filename)
 
     if is_duplicate(file_path, destination_folder, hash_cache):
+        duplicate_path = get_available_path(
+            os.path.join(duplicate_folder, filename), reserved_paths
+        )
+
         return {
             "action": "duplicate",
             "filename": filename,
@@ -255,8 +281,23 @@ def build_plan_item(file_path, planned_numbers):
             "source_path": file_path,
             "destination_folder": duplicate_folder,
             "destination_path": duplicate_path,
-            "display_path": "99_Review/Duplicates",
+            "display_path": f"99_Review/Duplicates/{os.path.basename(duplicate_path)}",
         }
+
+    clean_name = build_clean_name(category, filename, planned_numbers)
+    destination_path = get_available_path(
+        os.path.join(destination_folder, clean_name), reserved_paths
+    )
+
+    return {
+        "action": "move",
+        "filename": filename,
+        "category": category,
+        "source_path": file_path,
+        "destination_folder": destination_folder,
+        "destination_path": destination_path,
+        "display_path": f"{category}/{os.path.basename(destination_path)}",
+    }
 
     clean_name = build_clean_name(category, filename, planned_numbers)
     destination_path = os.path.join(destination_folder, clean_name)
@@ -288,6 +329,7 @@ if not items:
     exit()
 
 plan = []
+reserved_paths = set()
 skipped_folders = 0
 
 if dry_run:
@@ -307,7 +349,7 @@ for item in items:
         continue
 
     if os.path.isfile(item_path):
-        plan_item = build_plan_item(item_path, planned_numbers)
+        plan_item = build_plan_item(item_path, planned_numbers, reserved_paths)
         plan.append(plan_item)
 
 if not plan:
