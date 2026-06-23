@@ -2,7 +2,6 @@ import os
 import shutil
 import hashlib
 import json
-import time
 from datetime import datetime
 from helpers import get_input
 
@@ -26,11 +25,6 @@ if not dry_run_answer:
 
 dry_run = dry_run_answer == "y"
 
-watch_mode_answer = (
-    input("Watch mode? Keep running and monitor 00_Inbox. (y/n) [n]: ").strip().lower()
-)
-
-watch_mode = watch_mode_answer == "y"
 
 # ===== FILE CATEGORIES =====
 
@@ -248,38 +242,6 @@ def get_available_path(path, reserved_paths=None):
     return candidate_path
 
 
-def move_file(file_path, planned_numbers):
-    filename = os.path.basename(file_path)
-    category = get_category(filename)
-
-    destination_folder = os.path.join(media_root, category)
-    clean_name = build_clean_name(category, filename, planned_numbers)
-    destination_path = os.path.join(destination_folder, clean_name)
-
-    duplicate_folder = os.path.join(review_folder, "Duplicates")
-
-    if is_duplicate(file_path, destination_folder, hash_cache):
-        duplicate_path = os.path.join(duplicate_folder, filename)
-
-        if dry_run:
-            print(f"[DUPLICATE] {filename} already exists in {category}")
-        else:
-            os.makedirs(duplicate_folder, exist_ok=True)
-            shutil.move(file_path, duplicate_path)
-            print(f"[DUPLICATE MOVE] {filename} -> 99_Review/Duplicates")
-
-        return "Duplicates"
-
-    if dry_run:
-        print(f"[DRY RUN] {filename} -> {category}/{clean_name}")
-    else:
-        os.makedirs(destination_folder, exist_ok=True)
-        shutil.move(file_path, destination_path)
-        print(f"[MOVE] {filename} -> {category}/{clean_name}")
-
-    return category
-
-
 def build_plan_item(file_path, planned_numbers, reserved_paths=None):
     filename = os.path.basename(file_path)
     category = get_category(filename)
@@ -459,35 +421,3 @@ save_log()
 print(f"[LOG] Saved organizer log: {log_file}")
 
 print("\n[DONE] Media organization complete.\n")
-
-
-# ===== WATCH MODE =====
-
-if watch_mode:
-    print("[WATCH MODE] Monitoring 00_Inbox...")
-    print("[WATCH MODE] Press CTRL + C to stop.\n")
-
-    known_files = set(os.listdir(inbox_folder))
-
-    while True:
-        time.sleep(3)
-
-        current_files = set(os.listdir(inbox_folder))
-        new_files = current_files - known_files
-
-        if new_files:
-            print(f"\n[WATCH MODE] New files detected: {len(new_files)}")
-
-            planned_numbers = build_starting_numbers()
-
-            for item in sorted(new_files):
-                item_path = os.path.join(inbox_folder, item)
-
-                if os.path.isfile(item_path):
-                    category = move_file(item_path, planned_numbers)
-                    category_counts[category] = category_counts.get(category, 0) + 1
-
-            if not dry_run:
-                save_hash_cache(hash_cache)
-
-        known_files = current_files
