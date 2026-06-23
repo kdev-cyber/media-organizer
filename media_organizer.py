@@ -3,6 +3,7 @@ import shutil
 import hashlib
 import json
 import time
+from datetime import datetime
 from helpers import get_input
 
 print("\n=== Media Organizer v6 ===\n")
@@ -34,6 +35,7 @@ watch_mode = watch_mode_answer == "y"
 # ===== FILE CATEGORIES =====
 
 hash_cache_file = os.path.join(media_root, "hash_cache.json")
+log_file = os.path.join(media_root, "organizer_log.txt")
 
 folders = {
     "Videos": [".mp4", ".mkv", ".mov", ".avi", ".webm", ".wmv"],
@@ -93,6 +95,22 @@ def load_hash_cache():
 def save_hash_cache(cache):
     with open(hash_cache_file, "w") as file:
         json.dump(cache, file, indent=4)
+
+
+log_entries = []
+
+
+def add_log(message):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_entries.append(f"[{timestamp}] {message}")
+
+
+def save_log():
+    with open(log_file, "a", encoding="utf-8") as file:
+        file.write("\n=== Media Organizer Run ===\n")
+
+        for entry in log_entries:
+            file.write(entry + "\n")
 
 
 def get_category(filename):
@@ -311,6 +329,10 @@ items = sorted(os.listdir(inbox_folder))
 planned_numbers = build_starting_numbers()
 hash_cache = load_hash_cache()
 
+add_log(f"Mode: {'dry run' if dry_run else 'live'}")
+add_log(f"Media root: {media_root}")
+add_log(f"Inbox: {inbox_folder}")
+
 if not items:
     print("[DONE] 00_Inbox is empty. Nothing to organize.")
     exit()
@@ -332,6 +354,7 @@ for item in items:
 
     if os.path.isdir(item_path):
         print(f"[SKIP] Folder skipped: {item}")
+        add_log(f"Skipped folder: {item}")
         skipped_folders += 1
         continue
 
@@ -358,12 +381,15 @@ for plan_item in plan:
     filename = plan_item["filename"]
 
     if plan_item["action"] == "duplicate":
-        print(f"[DUPLICATE] {filename} -> {plan_item['display_path']}")
+        message = f"[DUPLICATE] {filename} -> {plan_item['display_path']}"
     else:
         if dry_run:
-            print(f"[DRY RUN] {filename} -> {plan_item['display_path']}")
+            message = f"[DRY RUN] {filename} -> {plan_item['display_path']}"
         else:
-            print(f"[PLAN] {filename} -> {plan_item['display_path']}")
+            message = f"[PLAN] {filename} -> {plan_item['display_path']}"
+
+    print(message)
+    add_log(message)
 
 if not dry_run:
     print("\n[CONFIRMATION REQUIRED]")
@@ -393,9 +419,13 @@ for plan_item in plan:
     shutil.move(plan_item["source_path"], plan_item["destination_path"])
 
     if plan_item["action"] == "duplicate":
-        print(f"[DUPLICATE MOVE] {filename} -> {plan_item['display_path']}")
+        message = f"[DUPLICATE MOVE] {filename} -> {plan_item['display_path']}"
     else:
-        print(f"[MOVE] {filename} -> {plan_item['display_path']}")
+        message = f"[MOVE] {filename} -> {plan_item['display_path']}"
+
+    print(message)
+    add_log(message)
+
 
 print("\n=== Summary ===")
 
@@ -411,8 +441,22 @@ if category_counts:
     for category, count in sorted(category_counts.items()):
         print(f"- {category}: {count}")
 
+if dry_run:
+    add_log(f"Files previewed: {processed_count}")
+else:
+    add_log(f"Files moved: {processed_count}")
+
+add_log(f"Folders skipped: {skipped_folders}")
+
+if category_counts:
+    for category, count in sorted(category_counts.items()):
+        add_log(f"{category}: {count}")
+
 if not dry_run:
     save_hash_cache(hash_cache)
+
+save_log()
+print(f"[LOG] Saved organizer log: {log_file}")
 
 print("\n[DONE] Media organization complete.\n")
 
