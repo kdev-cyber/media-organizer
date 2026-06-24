@@ -1,29 +1,26 @@
 # Media Organizer
 
-A Python media organization tool that sorts files from a safe inbox folder into categorized media folders with clean hybrid filenames.
+A safe Python command-line tool that organizes files from a `00_Inbox` folder into media categories such as Videos, Images, Audio, Documents, Archives, and Subtitles.
 
-Built as part of a practical automation portfolio.
-
----
+This project focuses on safe automation: previewing actions before moving files, avoiding filename collisions, detecting duplicates, and keeping a log of each run.
 
 ## Features
 
-- Sorts media files into organized folders
-- Supports videos, images, audio, documents, archives, and subtitles
-- Safe dry-run preview mode by default
-- Automatic folder creation
-- Clean hybrid filenames like `IMG_0001_screenshot.png`
-- Sequential numbering that does not reuse deleted numbers
-- Duplicate detection using file hashes
-- Duplicate quarantine folder
-- Persistent hash cache using `hash_cache.json`
-- Watch mode for monitoring `00_Inbox`
-- Unsupported files go to `99_Review`
-- Saves media folder path using `settings.json`
-
----
+* Sorts files from `00_Inbox` into organized folders
+* Supports Videos, Images, Audio, Documents, Archives, and Subtitles
+* Sends unknown file types to `99_Review`
+* Dry run mode previews changes without moving files
+* Builds a full organization plan before applying changes
+* Requires `ORGANIZE` confirmation before live moves
+* Uses numbered, cleaned filenames
+* Continues numbering from existing files
+* Detects duplicate files using file hashes
+* Prevents destination filename collisions
+* Saves an organizer log after each run
 
 ## Folder Structure
+
+The tool expects a media folder like this:
 
 ```text
 Media/
@@ -34,106 +31,101 @@ Media/
 ├── Documents/
 ├── Archives/
 ├── Subtitles/
-├── 99_Review/
-└── hash_cache.json
+└── 99_Review/
 ```
 
+Files should be placed inside `00_Inbox` before running the organizer.
 
-## Example Renaming
-Screenshot 2026-05-28 005501.png
-→ IMG_0003_screenshot_2026_05_28_005501.png
+## Example Output
 
-Download.mp4
-→ VID_0020_download.mp4
+```text
+=== Media Organizer v6 ===
 
-POWERELLA V01 PDF DELUXE.zip
-→ ARC_0001_powerella_v01_pdf_deluxe.zip
+[MODE] Dry run enabled. No files will be moved.
 
+=== Organization Plan ===
+[DRY RUN] clip.mp4 -> Videos/VID_0001_clip.mp4
+[DRY RUN] photo.jpg -> Images/IMG_0001_photo.jpg
 
-## Duplicate Detection
+=== Summary ===
+Files previewed: 2
+Folders skipped: 0
 
-Media Organizer checks file contents using hashes, not just filenames.
+By category:
+- Images: 1
+- Videos: 1
 
-That means duplicate files can be detected even if they have different names.
+[LOG] Saved organizer log: C:\Users\K\Desktop\Media\organizer_log.txt
+[DONE] Media organization complete.
+```
 
-Duplicates are not deleted. They are moved to:
+## Safety Features
 
-`99_Review/Duplicates`
+The organizer is designed to avoid accidental damage.
 
+Dry run mode is enabled by default, so files are previewed before anything is moved.
 
-## Watch Mode
+Live mode requires typing:
 
-Watch mode keeps the script running and monitors 00_Inbox.
+```text
+ORGANIZE
+```
 
-When a new file appears, the organizer detects it and processes it automatically.
+before any files are moved.
 
-Watch mode? Keep running and monitor 00_Inbox. (y/n) [n]:
+The tool also checks for duplicate files and avoids overwriting existing destination filenames.
 
-Press CTRL + C to stop watch mode.
+## How to Run
 
-
-## How To Use
-
-1. Create a main Media folder.
-2. Create a `00_Inbox` folder.
-3. Drop files into `00_Inbox`.
-4. Run:
+Run the script from the project folder:
 
 ```bash
 python media_organizer.py
 ```
 
-5. Choose dry run first:
+Then follow the prompts:
 
 ```text
-y
+Enter your main media library folder [C:\Users\K\Desktop\Media]:
+Dry run mode? Preview only, no files moved. (y/n) [y]:
 ```
 
-6. If the preview looks correct, run again and choose live mode:
+Press Enter to use the default media folder and dry run mode.
+
+## Logging
+
+Each run saves a log file in the media folder:
 
 ```text
-n
+organizer_log.txt
 ```
 
+The log records the mode used, planned file moves, skipped folders, and final summary.
 
-## Supported File Types
+## Project Goals
 
-Videos: .mp4, .mkv, .mov, .avi, .webm, .wmv
+This project demonstrates practical Python automation skills:
 
-Images: .jpg, .jpeg, .png, .gif, .webp, .bmp, .tif, .tiff
+* File and folder handling
+* Safe command-line workflows
+* User input validation
+* Duplicate detection with hashing
+* Collision-safe file naming
+* Dry run previews
+* Logging
+* Git/GitHub project workflow
 
-Audio: .mp3, .wav, .flac, .aac, .ogg, .m4a
+## Tech Used
 
-Documents: .txt, .pdf, .docx, .rtf
+* Python
+* Standard library modules:
 
-Archives: .zip, .rar, .7z
+  * `os`
+  * `shutil`
+  * `hashlib`
+  * `json`
+  * `datetime`
 
-Subtitles: .srt, .ass, .ssa, .vtt
+## Status
 
-
-## Future Improvements
-
-- Downloads folder intake watcher
-- Smarter filename cleanup
-- Metadata-based sorting
-- Thumbnail previews
-- GUI/Desktop app version
-- Silent hover preview for videos
-- Open media in default player or VLC
-- AI-assisted media search
-- Image similarity detection
-- Audio fingerprinting
-- Video recognition
-
-## Technologies Used
-
-- Python
-- os
-- shutil
-- hashlib
-- json
-- time
-
-## Author
-
-Created by KDEV-CYBER
+Portfolio-ready command-line automation project.
