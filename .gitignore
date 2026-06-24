@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
+
 settings.json
+
+hash_cache.json
+organizer_log.txt
+*.log
